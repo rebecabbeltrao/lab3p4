@@ -20,8 +20,35 @@ knitr::opts_chunk$set(tidy = FALSE,
 
 ```
 
+#Queremos observar .................
+
 ```{r}
 dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
 
 ```
 
+##1. Jogos aos domingos têm mais gols que jogos às quartas? 
+# Calculando o Intervalo de Confiança
+
+```{r}
+jogo_dom = dados %>% 
+  filter(Dia == "Domingo") %>% 
+  summarise(mediana_gols = median(gols))
+```
+
+
+```{r}
+theta_f = function(d, i){
+    d %>% 
+        slice(i) %>% 
+        summarise(correlacao = cor(, seguido_gh)) %>% 
+        pull(correlacao)
+}
+
+theta_c = theta_f(dados, 1:NROW(dados))
+```
+
+
+
+
+#2. Jogos onde há um vitorioso têm mais ou menos gols que empates? 
