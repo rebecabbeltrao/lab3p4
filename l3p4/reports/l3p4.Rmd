@@ -1,0 +1,11 @@
+---
+title: "L3P4: p-valores vs ICs"
+output: html_notebook:
+        df_printed: paged
+theme: sandstone
+---
+
+```{r echo = FALSE, message = FALSE}
+
+```
+
