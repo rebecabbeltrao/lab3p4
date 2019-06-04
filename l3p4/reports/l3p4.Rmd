@@ -8,6 +8,20 @@ theme: sandstone
 ---
 
 ```{r echo = FALSE, message = FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+
+library(boot)
+library(broom)
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5)
+
+```
+
+```{r}
+dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
 
 ```
 
