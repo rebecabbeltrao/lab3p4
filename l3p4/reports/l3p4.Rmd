@@ -10,21 +10,17 @@ theme: sandstone
 ```{r echo = FALSE, message = FALSE}
 library(tidyverse)
 theme_set(theme_bw())
-
 library(boot)
 library(broom)
-
 knitr::opts_chunk$set(tidy = FALSE,
                       fig.width = 6,
                       fig.height = 5)
-
 ```
 
 #Queremos observar .................
 
 ```{r}
 dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
-
 ```
 
 ##1. Jogos aos domingos têm mais gols que jogos às quartas? 
@@ -33,30 +29,53 @@ dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
 ```{r}
 jogo_dom = dados %>% 
   filter(Dia == "Domingo") %>% 
-  summarise(media_gols_dom = mean(gols))
+  summarise(media_gols_domingo = mean(gols))
+
+jogos_quarta = dados %>%
+              filter(Dia == 'Quarta-Feira') %>%
+              summarise(media_gols_quarta  = mean(gols))
 ```
-
-```{r}
-jogo_quarta = dados %>% 
-  filter(Dia == "Quarta-feira") %>% 
-  summarise(media_gols_quarta = mean(gols))
-```
-
-
 
 
 ```{r}
-theta_f = function(d, i){
-    d %>% 
+theta_domingo = function(d, i){
+    d %>%
+        filter(Dia == 'Domingo') %>%
         slice(i) %>% 
-        summarise(correlacao = cor(, seguido_gh)) %>% 
-        pull(correlacao)
+        summarise(media_gols_domingo = mean(gols)) %>% 
+        pull(media_gols_domingo)
 }
 
-theta_c = theta_f(dados, 1:NROW(dados))
+theta_quarta = function(d, i){
+    d %>% 
+        filter(Dia == 'Quarta-feira') %>%
+        slice(i) %>% 
+        summarise(media_gols_quarta = mean(gols)) %>% 
+        pull(media_gols_quarta)
+}
+
+
+theta_domingo(dados, 1:NROW(dados))
+theta_quarta(dados, 1:NROW(dados))
+```
+
+```{r}
+jogos_domingo = dados %>% 
+    boot(statistic = theta_domingo, R = 4000) %>% 
+    tidy(conf.level = 0.95, 
+         conf.int = TRUE)
+
+jogos_quarta = dados %>%
+              boot(statistic = theta_quarta, R = 4000) %>%
+              tidy(conf.level = 0.95,
+                   conf.int = TRUE)
 ```
 
 
 
 
 #2. Jogos onde há um vitorioso têm mais ou menos gols que empates? 
+
+
+
+
