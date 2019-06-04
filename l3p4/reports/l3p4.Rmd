@@ -72,10 +72,28 @@ jogos_quarta = dados %>%
 ```
 
 
-
-
 #2. Jogos onde há um vitorioso têm mais ou menos gols que empates? 
 
 
+```{r}
+theta_vencedor = function(d, i){
+    d %>% 
+        slice(i) %>% 
+        filter(Vencedor != "-") %>% 
+        summarise(media_vencedor = mean(gols)) %>% 
+        pull(media_vencedor)
+}
+
+theta_empate = function(d, i){
+    d %>% 
+        slice(i) %>% 
+        filter(Vencedor == "-") %>% 
+        summarise(media_empate = mean(gols)) %>% 
+        pull(media_empate)
+}
+
+theta_vencedor(dados, 1:NROW(dados))
+theta_empate(dados, 1:NROW(dados))
+```
 
 
