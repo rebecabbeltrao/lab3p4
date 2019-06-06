@@ -24,18 +24,9 @@ dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
 ```
 
 ##1. Jogos aos domingos têm mais gols que jogos às quartas? 
-# Calculando o Intervalo de Confiança
+#Como queremos responder a pergunta acima, de que se os domingos têm mais gols que os jogos às quartas, utilizando Intervalos de Confiança (ICs) via permutação e em seguida, utilizar Testes de Hipóteses, vamos inicialmente calular os intervalos de confiança de gols marcados no Domingo e na Quarta-feira, utilizando a média dos gols feitos nesses dois dias avaliados.
 
-```{r}
-jogo_dom = dados %>% 
-  filter(Dia == "Domingo") %>% 
-  summarise(media_gols_domingo = mean(gols))
-
-jogos_quarta = dados %>%
-              filter(Dia == 'Quarta-Feira') %>%
-              summarise(media_gols_quarta  = mean(gols))
-```
-
+## Calculando o Intervalo de Confiança para os dias de Quarta-feira e Domingo.
 
 ```{r}
 theta_domingo = function(d, i){
@@ -70,7 +61,68 @@ jogos_quarta = dados %>%
               tidy(conf.level = 0.95,
                    conf.int = TRUE)
 ```
+Percebemos que no nosso conjunto de dados, que o Intervalo de Confiança gerado para os jogos de Domingo é entre [	2.155691, 2.585849], para os jogos da Quarta-feira[2.014302, 2.762674], observamos que o Intervalo de Confiança gerado pelos gols marcados nos dias de Domingo é mais concentrado enquanto o IC para a Quarta-feira é mais abrangente, percebemos também que ocorre uma interesecção entre os Intervalos de Confiança entre [	2.155691, 2.585849] que é justamente o Intervalo dos jogos de Domingo, logo concluímos que para os jogos da Quarta-feira a uma maior chance de ter mais gols que os jogos do Domingo.
+```{r}
+theta_diferenca = function(d, i) {
+  gols_diferenca = d %>%
+                  slice(i) %>%
+                  group_by(Dia) %>%
+                  summarise(gols_feitos = mean(gols))
+  
+  gols_quarta = gols_diferenca %>% filter(Dia == 'Quarta-feira') %>%
+                pull(gols_feitos)
+  gols_domingo = gols_diferenca %>% filter(Dia == 'Domingo') %>% pull(gols_feitos)
+  
+  gols_domingo - gols_quarta
+}
 
+theta_domingo_quarta = theta_diferenca(dados, 1:NROW(dados))
+theta_domingo_quarta
+```
+Podemos reforçar isso, com a diferenca dos thetas, entre os gols do Domingo e da Quarta-feira, o que resultou em -0.01482372, re-afirmando nossa afirmação acima, que no dia da Quarta-feira ocorre mais gols que os dias de Domingo.
+
+#Teste de Hipótese
+##Agora utilizando o teste de Hipótese, primeiramente vamos definir nossas hípoteses:
+##Ho: Dias de Domingo possuem mais gols que os dias de Quarta-Feira
+##H1: Dias de Domingo não possuem mais gols que os dias de Quarta Feira
+```{r}
+set.seed(1234)
+theta_embaralhado = function(d) {
+  gols_marcados = d %>% 
+                  mutate(dia_gols = sample(Dia, n())) %>%
+                  group_by(dia_gols) %>%
+                  summarise(gols = mean(gols))
+  
+  gols_quarta = gols_marcados %>% filter(dia_gols == 'Quarta-feira') %>% pull(gols)
+  gols_domingo = gols_marcados %>% filter(dia_gols == 'Domingo') %>% pull(gols)
+  
+  gols_domingo - gols_quarta
+}
+theta_embaralhado(dados)
+```
+Como é gerado através do seed o valor de -0.2041667, atraves de diferentes amostras, percebemos o valor gerado é negativo, na qual, a partir do nosso seed, todas as reamostragens irão gerar um valor com que a diferença dos gols de domingo e da quarta-feira sejam negativos, na qual, demonstra um maior número de gols marcados na quarta-feira.
+O gráfico abaixo reforça essa diferença.
+```{r}
+diff = replicate(5000, {theta_embaralhado(dados)})
+
+tibble(diferencas = diff) %>%
+  ggplot(aes(x = diferencas)) +
+  geom_density(fill = 'white', color = 'darkgreen') +
+  geom_vline(xintercept = theta_diferenca(dados, 1:NROW(dados)), color = 'orange') +
+  geom_vline(xintercept = - theta_diferenca(dados, 1:NROW(dados)), color = 'orange') +
+  geom_rug()
+```
+
+#Gerando o valor-p
+
+```{r}
+gols_quarta = dados %>% filter(Dia == 'Quarta-feira') %>% pull(gols)
+gols_domingo = dados %>% filter(Dia == 'Domingo') %>% pull(gols)
+
+p_value = t.test(gols_domingo,gols_quarta) %>% tidy() %>% pull(p.value)
+p_value
+```
+Como o nosso valor-p é de 0.946 e é menor que o nosso alfa, 0.95, logo rejeitamos a nossa hípotese nula, ou seja, ao nível de significância de 95% os jogos de Domingo não possuem mais gols que os jogos da Quarta-feira.
 
 #2. Jogos onde há um vitorioso têm mais ou menos gols que empates? 
 
@@ -95,5 +147,6 @@ theta_empate = function(d, i){
 theta_vencedor(dados, 1:NROW(dados))
 theta_empate(dados, 1:NROW(dados))
 ```
+
 
 
