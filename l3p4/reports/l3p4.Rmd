@@ -2,8 +2,9 @@
 title: "L3P4: p-valores vs ICs"
 author: "Rebeca Miranda e Thiago Montenegro"
 date: "04 de Julho de 2019"
-output: html_notebook:
-        df_printed: paged
+output:
+    html_document:
+    df_print: paged
 theme: sandstone
 ---
 
