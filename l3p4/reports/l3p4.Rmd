@@ -11,13 +11,13 @@ theme: sandstone
 library(tidyverse)
 theme_set(theme_bw())
 library(boot)
+library(perm)
 library(broom)
 knitr::opts_chunk$set(tidy = FALSE,
                       fig.width = 6,
                       fig.height = 5)
 ```
 
-#Queremos observar .................
 
 ```{r}
 dados = read.csv2(here::here("data/campeonato-brasileiro.csv"))
@@ -102,6 +102,7 @@ theta_embaralhado(dados)
 ```
 Como é gerado através do seed o valor de -0.2041667, atraves de diferentes amostras, percebemos o valor gerado é negativo, na qual, a partir do nosso seed, todas as reamostragens irão gerar um valor com que a diferença dos gols de domingo e da quarta-feira sejam negativos, na qual, demonstra um maior número de gols marcados na quarta-feira.
 O gráfico abaixo reforça essa diferença.
+
 ```{r}
 diff = replicate(5000, {theta_embaralhado(dados)})
 
@@ -126,27 +127,63 @@ Como o nosso valor-p é de 0.946 e é menor que o nosso alfa, 0.95, logo rejeita
 
 #2. Jogos onde há um vitorioso têm mais ou menos gols que empates? 
 
+#Calculando o intervaldo de confiança para os gols nos jogos que obtiveram vencedores e nos empatados. 
+
+Primeiro vamos filtar os jogos que tiveram um vencedor e aqueles que empataram, e depois iremos calcular a média de gols para cada um deles. Com as médias, podemos calcular a diferença entre elas. Para calcular o intervalo de confiança, vamos usar a biblioteca boot. 
 
 ```{r}
-theta_vencedor = function(d, i){
-    d %>% 
-        slice(i) %>% 
-        filter(Vencedor != "-") %>% 
-        summarise(media_vencedor = mean(gols)) %>% 
-        pull(media_vencedor)
+set.seed(145)
+
+theta_vencedor_empate = function(d, i){
+  medias_vencedores = d %>% slice(i)
+  
+  gols_vencedores =  medias_vencedores %>% 
+       filter(Vencedor != "-") %>% 
+       summarise(n = mean(gols)) %>% 
+       pull()
+  
+  gols_empate = medias_vencedores %>% 
+       filter(Vencedor == "-") %>% 
+       summarise(n = mean(gols)) %>% 
+       pull()
+  
+  diferenca_vencedores = gols_vencedores - gols_empate
+  return(diferenca_vencedores)
+  
 }
 
-theta_empate = function(d, i){
-    d %>% 
-        slice(i) %>% 
-        filter(Vencedor == "-") %>% 
-        summarise(media_empate = mean(gols)) %>% 
-        pull(media_empate)
-}
+bootstrap_vencedor_empate = 
+  dados %>% 
+  boot(statistic = theta_vencedor_empate,
+       R = 4000) %>% 
+  tidy(conf.level = .95,
+       conf.int = TRUE)
+```
 
-theta_vencedor(dados, 1:NROW(dados))
-theta_empate(dados, 1:NROW(dados))
+```{r}
+bootstrap_vencedor_empate
 ```
 
 
+#Calculando o valor-p para o Teste de Hipoteses com permutação. 
 
+#Teste de Hipótese
+##Vamos definir nossas hípoteses:
+##Ho: Jogos com vitoriosos possuem mais gols que os que empatam
+##H1: Jogos com vitoriosos possuem menos gols que os que empatam
+
+```{r}
+
+gols_vencedores = dados %>% 
+  filter(Vencedor != "-") %>% 
+  pull(gols)
+
+gols_empatados = dados %>% 
+  filter(Vencedor == "-") %>% 
+  pull(gols)
+
+permTS(gols_vencedores, gols_empatados)
+
+```
+ 
+Observando os resultados, com 95% de confiança, calculamos um IC de aproximadamente [0.21,0.91], como esses valores são superiores a 0 há indicios que nos jogos onde há vencedores existe uma quantidade maior de gols que os jogos onde há empates, afirmando nossa hipotese nula. Analisando nosso valor-p *p-value = 0.001855*, vemos que o valor foi significante, abaixo de 5%, isso nos reafirma que podemos aceitar a hipotese nula e rejeitar H1. 
